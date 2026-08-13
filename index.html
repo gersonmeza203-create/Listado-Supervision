@@ -1,0 +1,1902 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+  <meta name="theme-color" content="#1a2635"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-title" content="Pabellones UNACIFOR"/>
+  <title>Control de Pabellones · UNACIFOR</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:#f0f4f8; --surface:#fff; --surface2:#e2e8f0; --border:#c8d6e5;
+      --accent:#1a6fcc; --accent2:#0a9e8a; --text:#1a2635; --text2:#4a6080;
+      --presente:#0a9e6a; --ausente:#d93055; --excusa:#c07800; --radius:13px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);}
+
+    /* HEADER */
+    header{background:linear-gradient(135deg,#1a2635,#243548);border-bottom:1px solid var(--border);
+      padding:10px 14px;display:flex;align-items:center;gap:11px;
+      position:sticky;top:0;z-index:100;box-shadow:0 3px 16px rgba(0,0,0,.15);}
+    .logo{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));
+      display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;
+      font-weight:700;font-size:12px;color:#fff;line-height:1.2;text-align:center;flex-shrink:0;}
+    .hd-text h1{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;
+      letter-spacing:1.5px;text-transform:uppercase;color:#fff;line-height:1;}
+    .hd-text p{font-size:10px;color:#8aafd4;margin-top:2px;}
+    .hd-right{margin-left:auto;text-align:right;}
+    #fecha-hora{font-family:'Rajdhani',sans-serif;font-size:11px;color:var(--accent2);font-weight:600;}
+    #reloj{font-family:'Rajdhani',sans-serif;font-size:19px;font-weight:700;color:#fff;line-height:1;}
+    .online-row{display:flex;align-items:center;gap:4px;margin-top:2px;justify-content:flex-end;}
+    #online-dot{width:7px;height:7px;border-radius:50%;background:#d93055;}
+    #online-txt{font-size:9px;color:#8aafd4;}
+
+    /* TABS */
+    .tabs-bar{background:var(--surface);border-bottom:1px solid var(--border);
+      display:flex;gap:4px;padding:6px 10px;overflow-x:auto;scrollbar-width:none;
+      -webkit-overflow-scrolling:touch;position:sticky;top:64px;z-index:99;}
+    .tabs-bar::-webkit-scrollbar{display:none;}
+    .tab-btn{flex-shrink:0;padding:6px 13px;border-radius:18px;border:none;
+      font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;
+      background:transparent;color:var(--text2);cursor:pointer;white-space:nowrap;}
+    .tab-btn.active{background:linear-gradient(135deg,var(--accent),#005fbf);color:#fff;
+      box-shadow:0 2px 10px rgba(26,111,204,.3);}
+
+    /* DATE BAR */
+    .date-bar{background:var(--bg);border-bottom:1px solid var(--border);
+      display:flex;align-items:center;position:sticky;top:106px;z-index:98;}
+    .date-arrow{flex-shrink:0;width:34px;height:40px;background:var(--surface2);
+      border:none;color:var(--text2);font-size:20px;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;}
+    .dates-scroll{flex:1;display:flex;gap:3px;overflow-x:auto;scrollbar-width:none;
+      padding:5px 5px;-webkit-overflow-scrolling:touch;}
+    .dates-scroll::-webkit-scrollbar{display:none;}
+    .date-chip{flex-shrink:0;display:flex;flex-direction:column;align-items:center;
+      padding:4px 8px;border-radius:8px;border:1.5px solid var(--border);
+      background:transparent;cursor:pointer;min-width:40px;}
+    .date-chip .dc-day{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;
+      color:var(--text);line-height:1;}
+    .date-chip .dc-dow{font-size:9px;font-weight:700;color:var(--text2);
+      letter-spacing:1px;text-transform:uppercase;margin-top:1px;}
+    .date-chip.active{background:linear-gradient(135deg,var(--accent),#005fbf);
+      border-color:var(--accent);}
+    .date-chip.active .dc-day,.date-chip.active .dc-dow{color:#fff;}
+    .date-chip.has-data{border-color:var(--accent2);}
+    .date-chip.has-data .dc-day{color:var(--accent2);}
+    .date-chip.today-chip:not(.active){border-color:var(--excusa);}
+    .date-chip.today-chip:not(.active) .dc-dow{color:var(--excusa);}
+    .date-label{text-align:center;padding:4px 0;font-family:'Rajdhani',sans-serif;
+      font-size:12px;font-weight:600;letter-spacing:1px;color:var(--accent2);
+      background:var(--bg);border-bottom:1px solid var(--border);
+      position:sticky;top:146px;z-index:97;}
+
+    /* MAIN */
+    main{flex:1;padding:10px 10px 158px;}
+    .cuarto-label{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;
+      letter-spacing:2px;text-transform:uppercase;color:var(--accent);
+      padding:4px 10px;border-left:4px solid var(--accent);
+      margin-bottom:8px;margin-top:16px;}
+
+    /* CARDS */
+    .card{background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius);margin-bottom:8px;overflow:hidden;}
+    .card-top{display:flex;align-items:center;gap:10px;padding:10px 12px 7px;}
+    .card-num{width:25px;height:25px;border-radius:50%;background:var(--surface2);
+      border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+      font-size:11px;font-weight:700;color:var(--text2);flex-shrink:0;}
+    .card-info{flex:1;min-width:0;}
+    .card-name{font-size:13px;font-weight:700;color:var(--text);line-height:1.2;}
+    .card-curso{display:inline-block;margin-top:2px;background:var(--surface2);
+      border:1px solid var(--border);border-radius:4px;padding:1px 6px;
+      font-size:9px;font-weight:700;letter-spacing:1px;color:var(--accent);text-transform:uppercase;}
+    .card-dot{width:9px;height:9px;border-radius:50%;background:var(--border);
+      flex-shrink:0;transition:background .2s;}
+    .card-dot.presente{background:var(--presente);box-shadow:0 0 7px var(--presente);}
+    .card-dot.ausente{background:var(--ausente);box-shadow:0 0 7px var(--ausente);}
+    .card-dot.excusa{background:var(--excusa);box-shadow:0 0 7px var(--excusa);}
+    .btn-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;padding:0 9px 9px;}
+    .abtn{border:1.5px solid var(--border);border-radius:7px;background:transparent;
+      color:var(--text2);font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;
+      padding:7px 4px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;}
+    .abtn .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+    .abtn.p .dot{background:var(--presente);}
+    .abtn.a .dot{background:var(--ausente);}
+    .abtn.e .dot{background:var(--excusa);}
+    .abtn.ap{background:rgba(10,158,106,.12);border-color:var(--presente);color:var(--presente);}
+    .abtn.aa{background:rgba(217,48,85,.12);border-color:var(--ausente);color:var(--ausente);}
+    .abtn.ae{background:rgba(192,120,0,.12);border-color:var(--excusa);color:var(--excusa);}
+
+    /* BOTTOM BAR */
+    #bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);
+      border-top:1px solid var(--border);padding:6px 12px 14px;
+      display:flex;flex-direction:column;gap:6px;z-index:200;
+      box-shadow:0 -6px 20px rgba(0,0,0,.1);}
+    .bar-top{display:flex;align-items:center;}
+    .res-item{display:flex;align-items:center;gap:5px;flex:1;justify-content:center;}
+    .res-dot{width:9px;height:9px;border-radius:50%;}
+    .res-label{font-size:10px;color:var(--text2);}
+    .res-num{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;line-height:1;}
+    .res-num.p{color:var(--presente);} .res-num.a{color:var(--ausente);} .res-num.e{color:var(--excusa);}
+    .bar-btns{display:flex;gap:7px;}
+    .ebtn{flex:1;border:none;border-radius:10px;padding:9px 4px;
+      font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;
+      color:#fff;cursor:pointer;text-align:center;}
+    .ebtn.pab{background:linear-gradient(135deg,var(--accent),var(--accent2));}
+    .ebtn.dia{background:linear-gradient(135deg,#c0392b,#e74c3c);}
+    .ebtn.mes{background:linear-gradient(135deg,#6c3483,#9b59b6);}
+    .ebtn.pre{background:linear-gradient(135deg,var(--presente),#0a7a52);}
+
+    /* MODAL REPORTE */
+    .modal-bg{display:none;position:fixed;inset:0;z-index:300;
+      background:rgba(0,0,0,.6);backdrop-filter:blur(4px);
+      align-items:flex-end;justify-content:center;}
+    .modal-bg.show{display:flex;}
+    .modal-box{background:var(--surface);border:1px solid var(--border);
+      border-radius:18px 18px 0 0;padding:20px 16px 32px;width:100%;max-width:520px;}
+    .modal-box h2{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;
+      letter-spacing:1.5px;text-transform:uppercase;color:var(--accent2);margin-bottom:12px;}
+    #export-text{background:var(--bg);border:1px solid var(--border);border-radius:9px;
+      padding:11px;font-size:11px;color:var(--text);white-space:pre-wrap;line-height:1.7;
+      max-height:38vh;overflow-y:auto;font-family:monospace;margin-bottom:11px;}
+    .mbtn-row{display:flex;gap:8px;}
+    .mbtn{flex:1;padding:10px;border-radius:9px;border:none;
+      font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
+    .mbtn.pdf{background:linear-gradient(135deg,#c0392b,#e74c3c);color:#fff;}
+    .mbtn.copy{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;}
+    .mbtn.cls{background:var(--surface2);border:1px solid var(--border);color:var(--text);}
+
+    /* MODAL MES */
+    #modal-mes{display:none;position:fixed;inset:0;z-index:300;
+      background:rgba(0,0,0,.6);backdrop-filter:blur(4px);
+      align-items:flex-end;justify-content:center;}
+    #modal-mes.show{display:flex;}
+    .mes-box{background:var(--surface);border:1px solid var(--border);
+      border-radius:18px 18px 0 0;padding:20px 16px 32px;width:100%;max-width:520px;}
+    .mes-box h2{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;
+      letter-spacing:1.5px;text-transform:uppercase;color:var(--accent2);margin-bottom:10px;}
+    .mes-selects{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:13px;}
+    .mes-selects label{font-size:11px;font-weight:700;color:var(--text2);display:block;margin-bottom:3px;}
+    .mes-selects select{width:100%;padding:9px;border-radius:8px;border:1.5px solid var(--border);
+      background:var(--surface2);color:var(--text);font-family:'Nunito',sans-serif;font-size:13px;}
+
+    /* BANNER OFFLINE */
+    #offline-banner{position:fixed;top:68px;left:50%;transform:translateX(-50%);
+      background:#1a2635;color:#fff;padding:7px 18px;border-radius:18px;
+      font-size:12px;font-weight:700;opacity:0;transition:opacity .4s;
+      pointer-events:none;z-index:500;white-space:nowrap;
+      box-shadow:0 3px 14px rgba(0,0,0,.25);}
+
+    /* TOAST */
+    #toast{position:fixed;bottom:140px;left:50%;transform:translateX(-50%);
+      background:var(--presente);color:#fff;padding:8px 20px;border-radius:18px;
+      font-size:13px;font-weight:700;opacity:0;transition:opacity .3s;
+      pointer-events:none;z-index:400;}
+    #toast.show{opacity:1;}
+
+    /* ADMIN MODAL */
+    #modal-admin{display:none;position:fixed;inset:0;z-index:300;
+      background:rgba(0,0,0,.65);backdrop-filter:blur(4px);
+      align-items:flex-end;justify-content:center;}
+    #modal-admin.show{display:flex;}
+    .admin-box{background:var(--surface);border:1px solid var(--border);
+      border-radius:18px 18px 0 0;padding:18px 15px 30px;
+      width:100%;max-width:520px;max-height:88vh;overflow-y:auto;}
+    .admin-box h2{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;
+      letter-spacing:1.5px;text-transform:uppercase;color:var(--accent2);margin-bottom:14px;}
+    .admin-selects{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+    .admin-selects label{font-size:11px;font-weight:700;color:var(--text2);display:block;margin-bottom:3px;}
+    .admin-selects select{width:100%;padding:9px;border-radius:8px;
+      border:1.5px solid var(--border);background:var(--surface2);
+      color:var(--text);font-family:'Nunito',sans-serif;font-size:13px;}
+    .admin-lista{margin-bottom:12px;}
+    .admin-fila{display:flex;align-items:center;gap:8px;padding:8px 10px;
+      background:var(--surface2);border:1px solid var(--border);
+      border-radius:9px;margin-bottom:6px;}
+    .admin-fila-num{font-size:11px;font-weight:700;color:var(--text2);
+      width:22px;flex-shrink:0;text-align:center;}
+    .admin-fila-nombre{flex:1;font-size:13px;font-weight:600;color:var(--text);}
+    .admin-fila-curso{font-size:10px;color:var(--accent);font-weight:700;
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:4px;padding:1px 6px;flex-shrink:0;}
+    .btn-del{background:rgba(217,48,85,.12);border:1.5px solid var(--ausente);
+      color:var(--ausente);border-radius:7px;padding:5px 10px;
+      font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;}
+    .admin-add{background:var(--surface2);border:1px solid var(--border);
+      border-radius:11px;padding:12px;margin-bottom:10px;}
+    .admin-add p{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;
+      text-transform:uppercase;letter-spacing:1px;}
+    .admin-inputs{display:grid;grid-template-columns:1fr auto;gap:7px;}
+    .admin-inputs input{padding:9px;border-radius:8px;border:1.5px solid var(--border);
+      background:var(--surface);color:var(--text);font-family:'Nunito',sans-serif;
+      font-size:13px;width:100%;}
+    .admin-inputs input::placeholder{color:var(--text2);}
+    .admin-curso-input{padding:9px;border-radius:8px;border:1.5px solid var(--border);
+      background:var(--surface);color:var(--text);font-family:'Nunito',sans-serif;
+      font-size:13px;width:100%;margin-top:7px;}
+    .btn-add{background:linear-gradient(135deg,var(--presente),#0a7a52);
+      border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;
+      padding:9px 14px;cursor:pointer;white-space:nowrap;}
+    .admin-hab-section{background:var(--surface2);border:1.5px dashed var(--accent);
+      border-radius:11px;padding:12px;margin-bottom:10px;}
+    .admin-hab-section p{font-size:12px;font-weight:700;color:var(--accent);
+      margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;}
+    .hab-inputs{display:grid;grid-template-columns:80px 1fr auto;gap:7px;align-items:end;}
+    .hab-inputs label{font-size:10px;font-weight:700;color:var(--text2);
+      display:block;margin-bottom:3px;}
+    .hab-inputs input{padding:9px;border-radius:8px;border:1.5px solid var(--border);
+      background:var(--surface);color:var(--text);font-family:'Nunito',sans-serif;
+      font-size:13px;width:100%;}
+    .btn-add-hab{background:linear-gradient(135deg,var(--accent),#005fbf);
+      border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;
+      padding:9px 12px;cursor:pointer;white-space:nowrap;margin-top:18px;}
+    .btn-del-hab{background:rgba(217,48,85,.1);border:1.5px solid var(--ausente);
+      color:var(--ausente);border-radius:7px;padding:4px 8px;
+      font-size:11px;font-weight:700;cursor:pointer;margin-left:6px;}
+    #adm-hab-section{display:none;}
+  </style>
+</head>
+<body>
+<header>
+  <div class="logo">UNA<br>CIF</div>
+  <div class="hd-text">
+    <h1>Pabellones</h1>
+    <p>Bienestar Estudiantil · UNACIFOR</p>
+  </div>
+  <div class="hd-right">
+    <div id="fecha-hora"></div>
+    <div id="reloj"></div>
+    <div class="online-row">
+      <div id="online-dot"></div>
+      <span id="online-txt">conectando...</span>
+    </div>
+  </div>
+  <button onclick="abrirAdmin()" style="margin-left:8px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);border-radius:9px;color:#fff;font-size:18px;width:36px;height:36px;cursor:pointer;flex-shrink:0;" title="Administrar estudiantes">⚙️</button>
+</header>
+
+<div class="tabs-bar" id="tabs-bar"></div>
+
+<div class="date-bar">
+  <button class="date-arrow" onclick="scrollFecha(-1)">&#8249;</button>
+  <div class="dates-scroll" id="dates-scroll"></div>
+  <button class="date-arrow" onclick="scrollFecha(1)">&#8250;</button>
+</div>
+<div class="date-label" id="date-label"></div>
+
+<main id="main-content"></main>
+
+<div id="bar">
+  <div class="bar-top">
+    <div class="res-item">
+      <div class="res-dot" style="background:var(--presente)"></div>
+      <div><div class="res-num p" id="cnt-p">0</div><div class="res-label">Presente</div></div>
+    </div>
+    <div class="res-item">
+      <div class="res-dot" style="background:var(--ausente)"></div>
+      <div><div class="res-num a" id="cnt-a">0</div><div class="res-label">Ausente</div></div>
+    </div>
+    <div class="res-item">
+      <div class="res-dot" style="background:var(--excusa)"></div>
+      <div><div class="res-num e" id="cnt-e">0</div><div class="res-label">Excusa</div></div>
+    </div>
+  </div>
+  <div class="bar-btns">
+    <button class="ebtn pab" onclick="abrirReporte()">📋 Pabellón</button>
+    <button class="ebtn dia" onclick="pdfDia()">⬇ Día</button>
+    <button class="ebtn mes" onclick="abrirMes()">📅 Mes</button>
+    <button class="ebtn pre" onclick="pdfPresentes()">✅ Presentes</button>
+  </div>
+</div>
+
+<!-- Modal reporte pabellón -->
+<div id="modal-rep" class="modal-bg" onclick="cerrarRepOutside(event)">
+  <div class="modal-box">
+    <h2>📋 Reporte de Asistencia</h2>
+    <div id="export-text"></div>
+    <div class="mbtn-row">
+      <button class="mbtn pdf" onclick="pdfPabellon()">⬇ PDF</button>
+      <button class="mbtn copy" onclick="copiarReporte()">Copiar</button>
+      <button class="mbtn cls" onclick="cerrarRep()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal mes -->
+<div id="modal-mes" onclick="cerrarMesOutside(event)">
+  <div class="mes-box">
+    <h2>📅 Reporte Mensual</h2>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">Selecciona mes y pabellón:</p>
+    <div class="mes-selects">
+      <div>
+        <label>MES</label>
+        <select id="sel-mes"></select>
+      </div>
+      <div>
+        <label>PABELLÓN</label>
+        <select id="sel-pab"></select>
+      </div>
+    </div>
+    <div class="mbtn-row">
+      <button class="mbtn pdf" onclick="pdfMes()">⬇ Descargar PDF</button>
+      <button class="mbtn cls" onclick="cerrarMes()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast">¡Copiado!</div>
+<div id="offline-banner"></div>
+
+<!-- Modal administración -->
+<div id="modal-admin" onclick="cerrarAdminOutside(event)">
+  <div class="admin-box">
+    <h2>⚙️ Administrar Estudiantes</h2>
+    <div class="admin-selects">
+      <div>
+        <label>PABELLÓN</label>
+        <select id="adm-pab" onchange="adminCambiarPab()"></select>
+      </div>
+      <div>
+        <label>CUARTO / HAB</label>
+        <select id="adm-cuarto" onchange="adminRenderLista()"></select>
+      </div>
+    </div>
+    <div class="admin-lista" id="adm-lista"></div>
+    <!-- Sección agregar habitación (solo CICAFOR) -->
+    <div class="admin-hab-section" id="adm-hab-section">
+      <p>🏠 Agregar habitación nueva</p>
+      <div class="hab-inputs">
+        <div>
+          <label>N° HAB</label>
+          <input id="adm-hab-num" type="number" placeholder="47" min="1" max="999"/>
+        </div>
+        <div>
+          <label>DESCRIPCIÓN (curso)</label>
+          <input id="adm-hab-desc" type="text" placeholder="ICF, DAS-I, TS..."/>
+        </div>
+        <button class="btn-add-hab" onclick="adminAgregarHab()">+ Habitación</button>
+      </div>
+    </div>
+    <div class="admin-add">
+      <p>➕ Agregar estudiante</p>
+      <div class="admin-inputs">
+        <input id="adm-nombre" type="text" placeholder="Nombre completo"/>
+        <button class="btn-add" onclick="adminAgregar()">Agregar</button>
+      </div>
+      <input id="adm-curso" type="text" placeholder="Curso (ej: IER, DAS, ICF)" class="admin-curso-input"/>
+    </div>
+    <button onclick="cerrarAdmin()" style="width:100%;padding:11px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Cerrar</button>
+  </div>
+</div>
+
+<script>
+// ── FIREBASE ──────────────────────────────────────────────────────────────────
+firebase.initializeApp({
+  apiKey: "AIzaSyAOlAQLKUtTPy-_iPjccQQwS1uJPmJJ1bY",
+  authDomain: "internado-unacifor.firebaseapp.com",
+  databaseURL: "https://internado-unacifor-default-rtdb.firebaseio.com",
+  projectId: "internado-unacifor",
+  storageBucket: "internado-unacifor.firebasestorage.app",
+  messagingSenderId: "656376158533",
+  appId: "1:656376158533:web:eca72c930750b2aa7fc62c"
+});
+var db = firebase.database();
+
+var DATA = {
+  "LAURELES": {
+    "I IER-A": [
+      { nombre: "Andrea Gissel Salgado", curso: "IER" },
+      { nombre: "Claudia Maria Cordoba", curso: "IER" },
+      { nombre: "Darlin Mariela Ramos", curso: "IER" },
+      { nombre: "Leni Yasmin Alvarez", curso: "IER" }
+    ],
+    "I IER-B": [
+      { nombre: "Genesis Rocio Gutierrez", curso: "IER" },
+      { nombre: "Reyna de la Paz Salgado", curso: "IER" }
+    ],
+    "I IER-C": [
+      { nombre: "Noely Paola Martinez", curso: "IER" },
+      { nombre: "Vilma Yamileth Gomez", curso: "IER" },
+      { nombre: "Fany Naraly Garcia", curso: "IER" }
+    ],
+    "I TS-D": [
+      { nombre: "Yareli Hernandez", curso: "TS" },
+      { nombre: "Marlen Gutierrez", curso: "TS" },
+      { nombre: "Fatima Aminta Gonzales", curso: "TS" },
+      { nombre: "Gleny Sugeily Villalobo", curso: "TS" },
+      { nombre: "Doriam Coca", curso: "TS" },
+      { nombre: "Cristabel Mejia", curso: "TS" }
+    ]
+  },
+  "SAUCES": {
+    "IER-A": [
+      { nombre: "Brayan Alexander Romero", curso: "IER" },
+      { nombre: "Cristofer Alexis Suazo", curso: "IER" },
+      { nombre: "Jose Miguel Jimenez", curso: "IER" },
+      { nombre: "Hector Rene Acosta", curso: "IER" }
+    ],
+    "IER-B": [
+      { nombre: "Alfredo Jose Castillo", curso: "IER" },
+      { nombre: "Darwin Edin Canales", curso: "IER" },
+      { nombre: "Eliac Rahi Herrera", curso: "IER" },
+      { nombre: "Franklin Bernando Pineda", curso: "IER" }
+    ],
+    "IER-C": [
+      { nombre: "Gerald Enmanuel Galvez", curso: "IER" },
+      { nombre: "Erick Fernando Turcios", curso: "IER" },
+      { nombre: "Jonathan Alexander Moradel", curso: "IER" },
+      { nombre: "Jesus Javier Orellana", curso: "IER" }
+    ],
+    "IER-D": [
+      { nombre: "Joseth Adalid Banegas", curso: "IER" },
+      { nombre: "Miguel Francisco Padilla", curso: "IER" },
+      { nombre: "Osman Fabricio Padilla", curso: "IER" },
+      { nombre: "Rodrigo Emilio Chicas", curso: "IER" }
+    ]
+  },
+  "PINOS": {
+    "I DAS-A": [
+      { nombre: "Anderson Jean Dionicio", curso: "DAS" },
+      { nombre: "Anthony Jafeth Aguilar", curso: "DAS" },
+      { nombre: "Anthony Josue Munguia", curso: "DAS" },
+      { nombre: "Carlos Daniel Castillo", curso: "DAS" },
+      { nombre: "Jose Nahun Mejia", curso: "DAS" }
+    ],
+    "I DAS-B": [
+      { nombre: "Christopher Eduardo Reyes", curso: "DAS" },
+      { nombre: "Daniel Alessandro Cruz", curso: "DAS" },
+      { nombre: "Edson Didier Varela", curso: "DAS" },
+      { nombre: "Norman Daniel Suazo", curso: "DAS" }
+    ],
+    "I DAS-C": [
+      { nombre: "Darel Thomas Eligio", curso: "DAS" },
+      { nombre: "Elvis Arturo Lopez", curso: "DAS" },
+      { nombre: "Frank David Orellana", curso: "DAS" },
+      { nombre: "Jabes Noe Chicas", curso: "DAS" },
+      { nombre: "Jeremy Jared Urquia", curso: "DAS" },
+      { nombre: "Juan Angel Vasquez", curso: "DAS" }
+    ],
+    "I DAS-D": [
+      { nombre: "Jaime David Arguijo", curso: "DAS" },
+      { nombre: "Jese Daniel Hernandez", curso: "DAS" },
+      { nombre: "Jose Antonio Espinoza", curso: "DAS" },
+      { nombre: "Alexander Mendez", curso: "DAS" },
+      { nombre: "Norlan Keneth Espinal", curso: "DAS" }
+    ]
+  },
+  "ENCINOS": {
+    "III DAS-A": [
+      { nombre: "Saul Roque", curso: "III DAS" },
+      { nombre: "Breden Urquia", curso: "III DAS" },
+      { nombre: "Eric Valle", curso: "III DAS" },
+      { nombre: "Isaac Contreras", curso: "III DAS" },
+      { nombre: "Melvin Vargas", curso: "III DAS" }
+    ],
+    "III DAS-B": [
+      { nombre: "Denis Ventura", curso: "III DAS" },
+      { nombre: "Wilmer Granados", curso: "III DAS" },
+      { nombre: "Edar Perez", curso: "III DAS" },
+      { nombre: "Justin Urquia", curso: "III DAS" },
+      { nombre: "Carlos Maradiaga", curso: "III DAS" }
+    ],
+    "III DAS-C": [
+      { nombre: "Said Pérez", curso: "III DAS" },
+      { nombre: "Alexander Contreras", curso: "III DAS" },
+      { nombre: "Ahimeleth Zepeda", curso: "III DAS" },
+      { nombre: "Edwin Licona", curso: "III DAS" },
+      { nombre: "Niler Echeverria", curso: "III DAS" }
+    ],
+    "III DAS-D": [
+      { nombre: "Ronmel Miranda", curso: "III DAS" },
+      { nombre: "Ronald Chavarria", curso: "III DAS" },
+      { nombre: "Jose Baudilio", curso: "III DAS" },
+      { nombre: "Wilder Perez", curso: "III DAS" },
+      { nombre: "Carlos Meoño", curso: "III DAS" }
+    ]
+  },
+  "ROBLES": {
+    "I TS-A": [
+      { nombre: "Madelyne Yanirel Corea", curso: "TS" },
+      { nombre: "Maria Fernanda Lemus", curso: "TS" },
+      { nombre: "Asmin Yajaira Torres", curso: "TS" },
+      { nombre: "Greysi Liliana Gillen", curso: "TS" },
+      { nombre: "Lizzy Lorena Lorenzo", curso: "TS" },
+      { nombre: "Isabella Nazareth Rios", curso: "TS" }
+    ],
+    "I INM-B": [
+      { nombre: "Elisa Ernestina Ordoñez", curso: "INM" },
+      { nombre: "Fernanda Fuentes", curso: "INM" },
+      { nombre: "Sulmy Paola Martinez", curso: "INM" },
+      { nombre: "Hasly Enyimar Membreño", curso: "INM" }
+    ],
+    "I INM-C": [
+      { nombre: "Genesis Elizabeth Gonzales", curso: "INM" },
+      { nombre: "Kathleen Juliyeth Arteaga", curso: "INM" },
+      { nombre: "Riccy Esmeralda Rivera", curso: "INM" },
+      { nombre: "Raquel Abigail Cruz", curso: "INM" }
+    ],
+    "I INM-D": [
+      { nombre: "Camila Sofia Deras", curso: "INM" },
+      { nombre: "Cinthia Lizeth Acosta", curso: "INM" },
+      { nombre: "Marisabell Cantillano Palma", curso: "INM" }
+    ]
+  },
+  "MANGLES": {
+    "I IFC-A": [
+      { nombre: "Alvaro Laonier Escobar", curso: "ICF" },
+      { nombre: "Brandon Steven Aguilar", curso: "ICF" },
+      { nombre: "Carlos Jared Paredes", curso: "ICF" },
+      { nombre: "Dencel Alfredo Nolasco", curso: "ICF" }
+    ],
+    "I ICF-B": [
+      { nombre: "Carlos Raul Cortes", curso: "ICF" },
+      { nombre: "Edrian Jareth Cardona", curso: "ICF" },
+      { nombre: "Eduardo Jose Orellana", curso: "ICF" },
+      { nombre: "Emerson Samuel Dominguez", curso: "ICF" },
+      { nombre: "Gerson Mauricio Gaytan", curso: "ICF" }
+    ],
+    "I ICF-C": [
+      { nombre: "Jonier Jossimar Gonzales", curso: "ICF" },
+      { nombre: "Juan David Godoy", curso: "ICF" },
+      { nombre: "Julian Felix Haddad", curso: "ICF" },
+      { nombre: "Jeffry Joseth Flores", curso: "ICF" }
+    ],
+    "II INM-D": [
+      { nombre: "Alexander Lagos", curso: "II-INM" },
+      { nombre: "Olvin Duval", curso: "II-INM" },
+      { nombre: "Eduardo Martinez", curso: "II-INM" }
+    ]
+  },
+  "CEDROS": {
+    "II DAS-A": [
+      { nombre: "Cesar Ortega", curso: "II DAS" },
+      { nombre: "Jesus Euceda", curso: "II DAS" },
+      { nombre: "Erin Medina", curso: "II DAS" },
+      { nombre: "Ander Hernandez", curso: "II DAS" },
+      { nombre: "Cristofer Gonzales", curso: "II DAS" }
+    ],
+    "II DAS-B": [
+      { nombre: "Denis Perez", curso: "II DAS" },
+      { nombre: "Deivin Miranda", curso: "II DAS" },
+      { nombre: "Javier Montenegro", curso: "II DAS" },
+      { nombre: "Mario Calle", curso: "II DAS" },
+      { nombre: "Viktor Henriquez", curso: "II DAS" }
+    ],
+    "II DAS-C": [
+      { nombre: "Sven Varela", curso: "II DAS" },
+      { nombre: "Kaleb Ruiz", curso: "II DAS" },
+      { nombre: "Dereck Pinot", curso: "II DAS" },
+      { nombre: "Richard Agurcia", curso: "II DAS" },
+      { nombre: "Didier Soto", curso: "II DAS" }
+    ],
+    "II DAS-D": [
+      { nombre: "Cristian Moreno", curso: "II DAS" },
+      { nombre: "Francisco Escalante", curso: "II DAS" },
+      { nombre: "Luis Ferrera", curso: "II DAS" },
+      { nombre: "Roy Mejia", curso: "II DAS" },
+      { nombre: "Julio Gonzales", curso: "II DAS" }
+    ]
+  },
+  "CEIBOS": {
+    "I NMS-A": [
+      { nombre: "Carlos Jose Molina", curso: "TS" },
+      { nombre: "Marcos David Vasquez", curso: "TS" },
+      { nombre: "Samuel Esau Rodriguez", curso: "TS" },
+      { nombre: "Juan David Paz", curso: "INM" },
+      { nombre: "Armando Duarte", curso: "INM" }
+    ],
+    "I INM-B": [
+      { nombre: "Andy Said Estrada", curso: "INM" },
+      { nombre: "Erick Osaf Barz", curso: "INM" },
+      { nombre: "Jasond Dagoberto Hernandez", curso: "INM" },
+      { nombre: "Kevin Castillo", curso: "INM" },
+      { nombre: "Jose Zeron", curso: "INM" }
+    ],
+    "IV ICF-C": [
+      { nombre: "Jesus Orellana", curso: "IV ICF" },
+      { nombre: "Maynor Campos", curso: "IV ICF" }
+    ],
+    "IV ICF-D": [
+      { nombre: "Alfonso Vargas", curso: "IV ICF" },
+      { nombre: "Alejandro Vargas", curso: "IV ICF" },
+      { nombre: "Diomedes de Gracia", curso: "IV ICF" },
+      { nombre: "Edwin Montero", curso: "IV ICF" }
+    ]
+  },
+  "CICAFOR": {
+    "HAB 13 · II DAS": [
+      { nombre: "Valeria Gomez", curso: "II-DAS" },
+      { nombre: "Blanca Lara", curso: "II-DAS" }
+    ],
+    "HAB 14 · II DAS": [
+      { nombre: "Isis Garcia", curso: "II-DAS" },
+      { nombre: "Liliam Orellana", curso: "II-DAS" }
+    ],
+    "HAB 15 · II DAS": [
+      { nombre: "Emy Nolasco", curso: "II-DAS" },
+      { nombre: "Diana Hernandez", curso: "II-DAS" }
+    ],
+    "HAB 16 · II DAS": [
+      { nombre: "Xiomara Raudales", curso: "II-DAS" },
+      { nombre: "Daira Blanco", curso: "II-DAS" }
+    ],
+    "HAB 17 · II DAS": [
+      { nombre: "Genesis Castillo", curso: "II-DAS" },
+      { nombre: "Cresthel Castañeda", curso: "II-DAS" }
+    ],
+    "HAB 18 · III DAS": [
+      { nombre: "Karla Ordoñez", curso: "III-DAS" },
+      { nombre: "Dariana Chavarria", curso: "III-DAS" }
+    ],
+    "HAB 19 · III DAS": [
+      { nombre: "Brenda Viera", curso: "III-DAS" },
+      { nombre: "Diosmara Pinot", curso: "III-DAS" }
+    ],
+    "HAB 20 · III DAS": [
+      { nombre: "Stefany Nolasco", curso: "III-DAS" },
+      { nombre: "Karen Hernandez", curso: "III-DAS" }
+    ],
+    "HAB 21 · III DAS": [
+      { nombre: "Nathaly Membreño", curso: "III-DAS" },
+      { nombre: "Nahomy Romero", curso: "III-DAS" }
+    ],
+    "HAB 22 · III DAS": [
+      { nombre: "Amilly Rivera", curso: "III-DAS" },
+      { nombre: "Allison Anariba", curso: "III-DAS" },
+      { nombre: "Marian Sanchez", curso: "III-DAS" }
+    ],
+    "HAB 23 · III DAS": [
+      { nombre: "Denia Mendoza", curso: "III-DAS" }
+    ],
+    "HAB 24 · III DAS": [
+      { nombre: "Debby Moreno", curso: "III-DAS" },
+      { nombre: "Galilea Rosales", curso: "III-DAS" }
+    ],
+    "HAB 25 · DAS-I": [
+      { nombre: "Jary Anahira Garay", curso: "DAS-I" },
+      { nombre: "Jennifer Estela Villatoro", curso: "DAS-I" }
+    ],
+    "HAB 26 · DAS-I": [
+      { nombre: "Katia Melisa Isaguirre", curso: "DAS-I" },
+      { nombre: "Kellen Denise Martinez", curso: "DAS-I" }
+    ],
+    "HAB 27 · DAS-I": [
+      { nombre: "Lissi Dayana Lopez", curso: "DAS-I" },
+      { nombre: "Mellani Perez", curso: "DAS-I" }
+    ],
+    "HAB 28 · DAS-I": [
+      { nombre: "Genesis Nohelia Martinez", curso: "DAS-I" },
+      { nombre: "Ingrid Yolani Arita", curso: "DAS-I" }
+    ],
+    "HAB 29 · INM-TS": [
+      { nombre: "Odalys Torres", curso: "II-INM" }
+    ],
+    "HAB 30 · INM": [
+      { nombre: "Blanca Tinoco", curso: "II-INM" },
+      { nombre: "Natalia Nuñez", curso: "II-INM" }
+    ],
+    "HAB 31 · ICF": [
+      { nombre: "Aneliz Yasmin Cantarero", curso: "ICF" },
+      { nombre: "Daira Isabel Ordoñez", curso: "ICF" }
+    ],
+    "HAB 32 · ICF": [
+      { nombre: "Daniela Monserrat", curso: "ICF" },
+      { nombre: "Dinasca Kariana Gonzales", curso: "ICF" }
+    ],
+    "HAB 33 · ICF": [
+      { nombre: "Erika Maria Garcia", curso: "ICF" },
+      { nombre: "Giuliana Michell Colindres", curso: "ICF" }
+    ],
+    "HAB 37 · ICF": [
+      { nombre: "Lizzy Mariana Rubio", curso: "ICF" },
+      { nombre: "Ivanna Gabriela Pineda", curso: "ICF" }
+    ],
+    "HAB 39 · DAS-I": [
+      { nombre: "Rosy Nazareth Mejia", curso: "DAS-I" },
+      { nombre: "Yeydi Sucel Gamez", curso: "DAS-I" }
+    ],
+    "HAB 40 · TS": [
+      { nombre: "Claudia Chavez", curso: "II-TS" },
+      { nombre: "Mirna Argueta", curso: "II-TS" }
+    ],
+    "HAB 42 · DAS-I": [
+      { nombre: "Cecilia Suyapa Flores", curso: "DAS-I" },
+      { nombre: "Sahina Samaria Duron", curso: "DAS-I" }
+    ],
+    "HAB 43 · DAS-I": [
+      { nombre: "Danna Yureisy Hineztroza", curso: "DAS-I" },
+      { nombre: "Cecilia Alejandra Osorio", curso: "DAS-I" }
+    ],
+    "HAB 44 · DAS-I": [
+      { nombre: "Diana Abigail Aguilar", curso: "DAS-I" },
+      { nombre: "Fabiola Cristian Chacon", curso: "DAS-I" }
+    ],
+    "HAB 45 · DAS-III": [
+      { nombre: "Lizzy Espinal", curso: "DAS-III" },
+      { nombre: "Lourdes Nuñez", curso: "DAS-III" },
+      { nombre: "Nancy Dominguez", curso: "DAS-III" }
+    ],
+    "HAB 46 · IV ICF": [
+      { nombre: "Ilka Miranda", curso: "IV ICF" },
+      { nombre: "Celeste Arce", curso: "IV ICF" }
+    ]
+  }
+};
+
+
+// ── FECHAS (sin mutación de objeto Date) ──────────────────────────────────────
+var FECHAS = [];
+(function() {
+  var y = 2026, m = 4, d = 8; // inicio: 8 abril
+  while (true) {
+    var ms = String(m).length === 1 ? "0"+m : ""+m;
+    var ds = String(d).length === 1 ? "0"+d : ""+d;
+    FECHAS.push(y+"-"+ms+"-"+ds);
+    if (y === 2026 && m === 12 && d === 31) break;
+    d++;
+    var diasMes = [0,31,28,31,30,31,30,31,31,30,31,30,31];
+    if (d > diasMes[m]) { d = 1; m++; }
+    if (m > 12) { m = 1; y++; }
+    if (y > 2026) break; // safety
+  }
+})();
+
+function hoyStr() {
+  var n = new Date();
+  var m2 = n.getMonth() + 1;
+  var d2 = n.getDate();
+  return n.getFullYear() + "-" + (m2 < 10 ? "0"+m2 : ""+m2) + "-" + (d2 < 10 ? "0"+d2 : ""+d2);
+}
+
+var fechaActual = (FECHAS.indexOf(hoyStr()) >= 0) ? hoyStr() : FECHAS[0];
+
+var DIAS   = ["Dom","Lun","Mar","Mie","Jue","Vie","Sab"];
+var MESES  = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+var DIAS_S = ["D","L","M","X","J","V","S"];
+
+function parseFecha(s) {
+  var p = s.split("-");
+  return new Date(+p[0], +p[1]-1, +p[2]);
+}
+
+function fbKey(s) { return s.replace(/[.#$\[\]\/]/g, "_"); }
+
+// ── CACHE Y FIREBASE ──────────────────────────────────────────────────────────
+var cache = {};
+var estaEnLinea = false;
+var pendientesOffline = {}; // writes pendientes para subir al reconectar
+
+// ── LOCALSTORAGE: persistencia offline ────────────────────────────────────────
+function lsGuardar(fecha) {
+  try { localStorage.setItem("asis_"+fecha, JSON.stringify(cache[fecha] || {})); } catch(e) {}
+}
+
+function lsCargarTodo() {
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf("asis_") === 0) {
+        var f = k.substring(5);
+        if (!cache[f]) {
+          var parsed = JSON.parse(localStorage.getItem(k));
+          if (parsed) cache[f] = parsed;
+        }
+      }
+    }
+  } catch(e) {}
+}
+
+function lsGuardarPendiente(fecha, pab, cuartoKey, idx, val) {
+  try {
+    var k = "pend_"+fecha+"_"+pab+"_"+cuartoKey+"_"+idx;
+    if (val === "") { localStorage.removeItem(k); }
+    else { localStorage.setItem(k, val); }
+  } catch(e) {}
+}
+
+function lsSyncPendientes() {
+  // Al reconectarse, subir todos los pendientes a Firebase
+  try {
+    var toRemove = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf("pend_") === 0) {
+        var parts = k.split("_");
+        // pend_{fecha}_{pab}_{cuartoKey}_{idx}
+        var fecha = parts[1];
+        var pab = parts[2];
+        var cuartoKey = parts[3];
+        var idx = parts[4];
+        var val = localStorage.getItem(k);
+        var path = "asistencia/"+fecha+"/"+pab+"/"+cuartoKey+"/"+idx;
+        if (val) { db.ref(path).set(val); }
+        else { db.ref(path).remove(); }
+        toRemove.push(k);
+      }
+    }
+    for (var j = 0; j < toRemove.length; j++) {
+      localStorage.removeItem(toRemove[j]);
+    }
+    if (toRemove.length > 0) {
+      mostrarBanner("☁️ "+toRemove.length+" registro(s) sincronizados con Firebase");
+    }
+  } catch(e) {}
+}
+
+function getEst(pab, cuarto, idx) {
+  try {
+    var a = cache[fechaActual]; if (!a) return "";
+    var b = a[pab]; if (!b) return "";
+    var c = b[fbKey(cuarto)]; if (!c) return "";
+    return c[idx] || "";
+  } catch(e) { return ""; }
+}
+
+function getEstFecha(fecha, pab, cuarto, idx) {
+  try {
+    var a = cache[fecha]; if (!a) return "";
+    var b = a[pab]; if (!b) return "";
+    var c = b[fbKey(cuarto)]; if (!c) return "";
+    return c[idx] || "";
+  } catch(e) { return ""; }
+}
+
+function setEst(pab, cuarto, idx, val) {
+  var k = fbKey(cuarto);
+  // 1. Actualizar cache local inmediatamente
+  if (!cache[fechaActual]) cache[fechaActual] = {};
+  if (!cache[fechaActual][pab]) cache[fechaActual][pab] = {};
+  if (!cache[fechaActual][pab][k]) cache[fechaActual][pab][k] = {};
+  cache[fechaActual][pab][k][idx] = val;
+  // 2. Guardar en localStorage siempre (modo offline)
+  lsGuardar(fechaActual);
+  // 3. Intentar subir a Firebase
+  var r = db.ref("asistencia/"+fechaActual+"/"+pab+"/"+k+"/"+idx);
+  if (val === "") { r.remove(); } else { r.set(val); }
+  // 4. Si estamos offline, guardar como pendiente para sincronizar luego
+  if (!estaEnLinea) {
+    lsGuardarPendiente(fechaActual, pab, k, idx, val);
+    mostrarBanner("📴 Sin internet — guardado localmente");
+  }
+}
+
+function tieneDatos(fecha) {
+  var d = cache[fecha];
+  if (!d) return false;
+  var pabs = Object.keys(d);
+  for (var i = 0; i < pabs.length; i++) {
+    var cuartos = Object.keys(d[pabs[i]] || {});
+    for (var j = 0; j < cuartos.length; j++) {
+      var idxs = Object.keys(d[pabs[i]][cuartos[j]] || {});
+      for (var k = 0; k < idxs.length; k++) {
+        if (d[pabs[i]][cuartos[j]][idxs[k]]) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function suscribir(fecha) {
+  fechaActual = fecha;
+  renderMain();
+  updateResumen();
+  updateLabel();
+  renderFechas();
+}
+
+function precargar() {
+  // Listener global en tiempo real
+  db.ref("asistencia").on("value", function(snap) {
+    var all = snap.val() || {};
+    for (var i = 0; i < FECHAS.length; i++) {
+      if (all[FECHAS[i]]) {
+        cache[FECHAS[i]] = all[FECHAS[i]];
+        lsGuardar(FECHAS[i]); // actualizar localStorage con datos de Firebase
+      }
+    }
+    renderMain();
+    updateResumen();
+    renderFechas();
+    setOnline(true);
+  }, function() {
+    setOnline(false);
+  });
+
+  // Detectar reconexión para sincronizar pendientes
+  db.ref(".info/connected").on("value", function(snap) {
+    if (snap.val() === true) {
+      estaEnLinea = true;
+      setOnline(true);
+      lsSyncPendientes(); // subir todo lo que se marcó sin internet
+    } else {
+      estaEnLinea = false;
+      setOnline(false);
+    }
+  });
+}
+
+function setOnline(on) {
+  var dot = document.getElementById("online-dot");
+  var txt = document.getElementById("online-txt");
+  if (dot) dot.style.background = on ? "#0a9e6a" : "#d93055";
+  if (txt) txt.textContent = on ? "en línea" : "sin conexión";
+}
+
+// Banner de notificación offline/sync
+function mostrarBanner(msg) {
+  var b = document.getElementById("offline-banner");
+  if (!b) return;
+  b.textContent = msg;
+  b.style.opacity = "1";
+  clearTimeout(b._t);
+  b._t = setTimeout(function(){ b.style.opacity = "0"; }, 3000);
+}
+
+// ── FECHAS BAR ────────────────────────────────────────────────────────────────
+function renderFechas() {
+  var scroll = document.getElementById("dates-scroll");
+  var hoy = hoyStr();
+  var chips = scroll.querySelectorAll(".date-chip");
+
+  if (chips.length === FECHAS.length) {
+    for (var i = 0; i < FECHAS.length; i++) {
+      var f = FECHAS[i];
+      var cls = "date-chip";
+      if (f === fechaActual) cls += " active";
+      else if (tieneDatos(f)) cls += " has-data";
+      if (f === hoy) cls += " today-chip";
+      chips[i].className = cls;
+    }
+    return;
+  }
+
+  scroll.innerHTML = "";
+  for (var i = 0; i < FECHAS.length; i++) {
+    (function(f) {
+      var dt = parseFecha(f);
+      var btn = document.createElement("button");
+      var cls = "date-chip";
+      if (f === fechaActual) cls += " active";
+      else if (tieneDatos(f)) cls += " has-data";
+      if (f === hoy) cls += " today-chip";
+      btn.className = cls;
+      btn.innerHTML = '<span class="dc-day">'+dt.getDate()+'</span><span class="dc-dow">'+DIAS[dt.getDay()]+'</span>';
+      btn.onclick = function() {
+        fechaActual = f;
+        renderFechas();
+        updateLabel();
+        renderMain();
+        updateResumen();
+        suscribir(f);
+      };
+      scroll.appendChild(btn);
+    })(FECHAS[i]);
+  }
+
+  var active = scroll.querySelector(".date-chip.active");
+  if (active) { active.scrollIntoView({inline:"center",block:"nearest"}); }
+}
+
+function updateLabel() {
+  var dt = parseFecha(fechaActual);
+  var hoy = hoyStr();
+  var ex = fechaActual === hoy ? " · HOY" : "";
+  document.getElementById("date-label").textContent =
+    DIAS[dt.getDay()] + ", " + dt.getDate() + " de " + MESES[dt.getMonth()] + " " + dt.getFullYear() + ex;
+}
+
+function scrollFecha(dir) {
+  var idx = FECHAS.indexOf(fechaActual) + dir;
+  if (idx >= 0 && idx < FECHAS.length) {
+    fechaActual = FECHAS[idx];
+    renderFechas();
+    updateLabel();
+    renderMain();
+    updateResumen();
+    suscribir(fechaActual);
+  }
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+var pabActual = Object.keys(DATA)[0];
+
+function renderTabs() {
+  var bar = document.getElementById("tabs-bar");
+  bar.innerHTML = "";
+  var pabs = Object.keys(DATA);
+  for (var i = 0; i < pabs.length; i++) {
+    (function(pab) {
+      var btn = document.createElement("button");
+      btn.className = "tab-btn" + (pab === pabActual ? " active" : "");
+      btn.textContent = pab;
+      btn.onclick = function() { pabActual = pab; renderTabs(); renderMain(); updateResumen(); };
+      bar.appendChild(btn);
+    })(pabs[i]);
+  }
+}
+
+// ── CARDS ─────────────────────────────────────────────────────────────────────
+function cardHTML(cuarto, ci, idx, al, est) {
+  var vac = getVac(pabActual, cuarto, idx);
+  var pC = (!vac && est==="presente") ? " ap" : "";
+  var aC = (!vac && est==="ausente")  ? " aa" : "";
+  var eC = (!vac && est==="excusa")   ? " ae" : "";
+  var blq = vac ? " bloqueado" : "";
+  var dC = vac ? "vacaciones" : (est||"");
+  var id = "c"+ci+"_"+idx;
+  var vacBtnTxt = vac ? "🏖️ Vac." : "🏖️";
+  var vacBtnCls = vac ? "btn-vac activo" : "btn-vac";
+  var cardCls = vac ? "card en-vacaciones" : "card";
+  return '<div class="'+cardCls+'" id="card-'+id+'">'
+    +'<div class="card-top">'
+    +'<div class="card-num">'+(idx+1)+'</div>'
+    +'<div class="card-info"><div class="card-name">'+al.nombre+'</div>'
+    +'<span class="card-curso">'+al.curso+'</span></div>'
+    +'<button class="'+vacBtnCls+'" onclick="toggleVac('+ci+','+idx+')">'+vacBtnTxt+'</button>'
+    +'<div class="card-dot '+dC+'"></div>'
+    +'</div>'
+    +'<div class="btn-row">'
+    +'<button class="abtn p'+pC+blq+'" onclick="marcar('+ci+','+idx+',\'presente\')" ><span class="dot"></span> Presente</button>'
+    +'<button class="abtn a'+aC+blq+'" onclick="marcar('+ci+','+idx+',\'ausente\')" ><span class="dot"></span> Ausente</button>'
+    +'<button class="abtn e'+eC+blq+'" onclick="marcar('+ci+','+idx+',\'excusa\')" ><span class="dot"></span> Excusa</button>'
+    +'</div></div>';
+}
+
+function renderMain() {
+  var main = document.getElementById("main-content");
+  if (!main) return;
+  var html = "";
+  var cuartos = Object.entries(DATA[pabActual]);
+  for (var ci = 0; ci < cuartos.length; ci++) {
+    var cuarto = cuartos[ci][0];
+    var alumnos = cuartos[ci][1];
+    html += '<div class="cuarto-label">'+cuarto+'</div>';
+    for (var idx = 0; idx < alumnos.length; idx++) {
+      html += cardHTML(cuarto, ci, idx, alumnos[idx], getEst(pabActual, cuarto, idx));
+    }
+  }
+  main.innerHTML = html;
+}
+
+// ── VACACIONES ───────────────────────────────────────────────────────────────
+var cacheVac = {};
+
+function getVac(pab, cuarto, idx) {
+  try {
+    var a = cacheVac[pab]; if (!a) return false;
+    var b = a[fbKey(cuarto)]; if (!b) return false;
+    return b[idx] === true;
+  } catch(e) { return false; }
+}
+
+function setVac(pab, cuarto, idx, val) {
+  var k = fbKey(cuarto);
+  if (!cacheVac[pab]) cacheVac[pab] = {};
+  if (!cacheVac[pab][k]) cacheVac[pab][k] = {};
+  cacheVac[pab][k][idx] = val;
+  var r = db.ref("vacaciones/"+pab+"/"+k+"/"+idx);
+  if (val) { r.set(true); } else { r.remove(); }
+  try { localStorage.setItem("vac_"+pab, JSON.stringify(cacheVac[pab])); } catch(e){}
+}
+
+function toggleVac(ci, idx) {
+  var cuarto = Object.keys(DATA[pabActual])[ci];
+  var actual = getVac(pabActual, cuarto, idx);
+  setVac(pabActual, cuarto, idx, !actual);
+  if (!actual) { setEst(pabActual, cuarto, idx, ""); }
+  var al = DATA[pabActual][cuarto][idx];
+  var card = document.getElementById("card-c"+ci+"_"+idx);
+  if (card) card.outerHTML = cardHTML(cuarto, ci, idx, al, getEst(pabActual, cuarto, idx));
+  updateResumen();
+}
+
+function cargarVacaciones() {
+  try {
+    var pabs = Object.keys(DATA);
+    for (var i = 0; i < pabs.length; i++) {
+      var stored = localStorage.getItem("vac_"+pabs[i]);
+      if (stored) cacheVac[pabs[i]] = JSON.parse(stored);
+    }
+  } catch(e){}
+  db.ref("vacaciones").on("value", function(snap) {
+    var data = snap.val() || {};
+    var pabs = Object.keys(data);
+    for (var i = 0; i < pabs.length; i++) {
+      cacheVac[pabs[i]] = data[pabs[i]];
+      try { localStorage.setItem("vac_"+pabs[i], JSON.stringify(data[pabs[i]])); } catch(e){}
+    }
+    renderMain();
+    updateResumen();
+  });
+}
+
+function abrirModalVac() {
+  var sel = document.getElementById("sel-vac-grupo");
+  sel.innerHTML = "";
+  var pabs = Object.keys(DATA);
+  for (var i = 0; i < pabs.length; i++) {
+    var opt = document.createElement("option");
+    opt.value = "PAB_"+pabs[i];
+    opt.textContent = "Pabellon completo: "+pabs[i];
+    if (pabs[i] === pabActual) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  var cuartos = Object.keys(DATA[pabActual]);
+  for (var j = 0; j < cuartos.length; j++) {
+    var opt2 = document.createElement("option");
+    opt2.value = "CU_"+pabActual+"%%"+cuartos[j];
+    opt2.textContent = pabActual+" - "+cuartos[j];
+    sel.appendChild(opt2);
+  }
+  document.getElementById("modal-vac").style.display = "flex";
+}
+
+function cerrarModalVac() { document.getElementById("modal-vac").style.display = "none"; }
+function cerrarModalVacOutside(e) { if(e.target===document.getElementById("modal-vac")) cerrarModalVac(); }
+
+function aplicarVacMasivo(activar) {
+  var val = document.getElementById("sel-vac-grupo").value;
+  var total = 0;
+  if (val.indexOf("PAB_") === 0) {
+    var pab = val.substring(4);
+    var cuartos = Object.keys(DATA[pab]);
+    for (var ci = 0; ci < cuartos.length; ci++) {
+      for (var idx = 0; idx < DATA[pab][cuartos[ci]].length; idx++) {
+        setVac(pab, cuartos[ci], idx, activar);
+        if (activar) setEst(pab, cuartos[ci], idx, "");
+        total++;
+      }
+    }
+  } else if (val.indexOf("CU_") === 0) {
+    var parts = val.substring(3).split("%%");
+    var pab = parts[0]; var cuarto = parts[1];
+    for (var idx = 0; idx < DATA[pab][cuarto].length; idx++) {
+      setVac(pab, cuarto, idx, activar);
+      if (activar) setEst(pab, cuarto, idx, "");
+      total++;
+    }
+  }
+  cerrarModalVac();
+  renderMain();
+  updateResumen();
+  mostrarToast((activar ? "🏖️ " : "✅ ") + total + " estudiantes actualizados");
+}
+
+function marcar(ci, idx, estado) {
+  var cuarto = Object.keys(DATA[pabActual])[ci];
+  if (getVac(pabActual, cuarto, idx)) return;
+  var actual = getEst(pabActual, cuarto, idx);
+  var nuevo = (actual === estado) ? "" : estado;
+  setEst(pabActual, cuarto, idx, nuevo);
+  var al = DATA[pabActual][cuarto][idx];
+  var card = document.getElementById("card-c"+ci+"_"+idx);
+  if (card) card.outerHTML = cardHTML(cuarto, ci, idx, al, nuevo);
+  updateResumen();
+}
+
+// ── RESUMEN ───────────────────────────────────────────────────────────────────
+function updateResumen() {
+  var p=0, a=0, e=0;
+  var cuartos = Object.entries(DATA[pabActual]);
+  for (var ci = 0; ci < cuartos.length; ci++) {
+    for (var idx = 0; idx < cuartos[ci][1].length; idx++) {
+      var est = getEst(pabActual, cuartos[ci][0], idx);
+      if (est==="presente") p++;
+      else if (est==="ausente") a++;
+      else if (est==="excusa") e++;
+    }
+  }
+  document.getElementById("cnt-p").textContent = p;
+  document.getElementById("cnt-a").textContent = a;
+  document.getElementById("cnt-e").textContent = e;
+}
+
+// ── RELOJ ─────────────────────────────────────────────────────────────────────
+function updateClock() {
+  var n = new Date();
+  var dc = ["Dom","Lun","Mar","Mie","Jue","Vie","Sab"];
+  var mc = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  var hh = n.getHours(); var mm = n.getMinutes();
+  document.getElementById("fecha-hora").textContent = dc[n.getDay()]+" "+n.getDate()+" "+mc[n.getMonth()];
+  document.getElementById("reloj").textContent = (hh<10?"0":"")+hh+":"+(mm<10?"0":"")+mm;
+}
+
+// ── REPORTE PABELLÓN ──────────────────────────────────────────────────────────
+function buildData(pab, fecha) {
+  var dt = parseFecha(fecha || fechaActual);
+  var fechaStr = DIAS[dt.getDay()]+" "+dt.getDate()+" de "+MESES[dt.getMonth()]+" "+dt.getFullYear();
+  var tP=0, tA=0, tE=0;
+  var cuartos = [];
+  var entries = Object.entries(DATA[pab]);
+  for (var ci = 0; ci < entries.length; ci++) {
+    var cuarto = entries[ci][0];
+    var alumnos = entries[ci][1];
+    var filas = [];
+    for (var idx = 0; idx < alumnos.length; idx++) {
+      var est = getEst(pab, cuarto, idx);
+      if (est==="presente") tP++;
+      else if (est==="ausente") tA++;
+      else if (est==="excusa") tE++;
+      filas.push({nombre:alumnos[idx].nombre, curso:alumnos[idx].curso, estado:est});
+    }
+    cuartos.push({nombre:cuarto, filas:filas});
+  }
+  return {pab:pab, fechaStr:fechaStr, tP:tP, tA:tA, tE:tE, cuartos:cuartos};
+}
+
+function buildTexto(r) {
+  var txt = "UNIVERSIDAD NACIONAL DE CIENCIAS FORESTALES\n";
+  txt += "BIENESTAR ESTUDIANTIL - CONTROL DE PABELLONES\n";
+  txt += "-----------------------------------------\n";
+  txt += "Pabellon: "+r.pab+"\nFecha: "+r.fechaStr+"\n";
+  txt += "-----------------------------------------\n\n";
+  for (var i = 0; i < r.cuartos.length; i++) {
+    var c = r.cuartos[i];
+    txt += "[ "+c.nombre+" ]\n";
+    for (var j = 0; j < c.filas.length; j++) {
+      var f = c.filas[j];
+      var lbl = f.estado==="presente"?"[P]":f.estado==="ausente"?"[A]":f.estado==="excusa"?"[E]":"[ ]";
+      var tag = f.estado ? f.estado.toUpperCase() : "SIN MARCAR";
+      var pad = f.nombre; while(pad.length<34) pad+=" ";
+      txt += "  "+lbl+" "+pad+tag+"\n";
+    }
+    txt += "\n";
+  }
+  txt += "-----------------------------------------\n";
+  txt += "TOTAL: Presentes "+r.tP+"  Ausentes "+r.tA+"  Excusas "+r.tE+"\n";
+  txt += "Supervisor/a: _________________________\nFirma: _________________________";
+  return txt;
+}
+
+function abrirReporte() {
+  var r = buildData(pabActual);
+  document.getElementById("export-text").textContent = buildTexto(r);
+  document.getElementById("modal-rep").classList.add("show");
+}
+function cerrarRep() { document.getElementById("modal-rep").classList.remove("show"); }
+function cerrarRepOutside(e) { if(e.target===document.getElementById("modal-rep")) cerrarRep(); }
+
+function copiarReporte() {
+  var txt = document.getElementById("export-text").textContent;
+  navigator.clipboard.writeText(txt).then(function() {
+    var t = document.getElementById("toast");
+    t.classList.add("show");
+    setTimeout(function(){ t.classList.remove("show"); }, 2000);
+  });
+}
+
+// ── PDF HELPERS ───────────────────────────────────────────────────────────────
+function pdfHeader(doc, pab, fechaStr, hora) {
+  var pw = doc.internal.pageSize.getWidth();
+  doc.setFillColor(26,111,204);
+  doc.rect(0,0,pw,26,"F");
+  doc.setTextColor(255,255,255);
+  doc.setFont("helvetica","bold"); doc.setFontSize(12);
+  doc.text("UNIVERSIDAD NACIONAL DE CIENCIAS FORESTALES", pw/2, 9, {align:"center"});
+  doc.setFontSize(9);
+  doc.text("Bienestar Estudiantil  ·  Control de Pabellones", pw/2, 16, {align:"center"});
+  doc.setFontSize(8);
+  doc.text("Pabellon: "+pab+"   Fecha: "+fechaStr+"   Hora: "+hora, pw/2, 23, {align:"center"});
+}
+
+function pdfCuartos(doc, r, startY, margin) {
+  var pw = doc.internal.pageSize.getWidth();
+  var ph = doc.internal.pageSize.getHeight();
+  var y = startY; var lh = 6;
+  for (var i = 0; i < r.cuartos.length; i++) {
+    var c = r.cuartos[i];
+    if (y > ph-18) { doc.addPage(); y = 14; }
+    doc.setFillColor(224,234,246);
+    doc.rect(margin, y-4, pw-margin*2, 7, "F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(8.5); doc.setTextColor(26,111,204);
+    doc.text(c.nombre.toUpperCase(), margin+2, y+1);
+    y += 8;
+    for (var j = 0; j < c.filas.length; j++) {
+      if (y > ph-8) { doc.addPage(); y = 14; }
+      var f = c.filas[j];
+      if (j%2===0) { doc.setFillColor(247,250,253); doc.rect(margin,y-3.5,pw-margin*2,lh,"F"); }
+      var col = f.estado==="presente"?[10,158,106]:f.estado==="ausente"?[217,48,85]:f.estado==="excusa"?[192,120,0]:[180,180,180];
+      doc.setFillColor(col[0],col[1],col[2]); doc.circle(margin+3,y,1.5,"F");
+      doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(26,38,53);
+      doc.text(f.nombre, margin+8, y+1);
+      doc.setTextColor(74,96,128); doc.text(f.curso, 130, y+1);
+      var elbl = f.estado ? f.estado.toUpperCase() : "SIN MARCAR";
+      doc.setFont("helvetica","bold"); doc.setTextColor(col[0],col[1],col[2]);
+      doc.text(elbl, 160, y+1);
+      y += lh;
+    }
+    y += 3;
+  }
+  return y;
+}
+
+function pdfFooter(doc, r, y, margin) {
+  var pw = doc.internal.pageSize.getWidth();
+  var ph = doc.internal.pageSize.getHeight();
+  if (y > ph-22) { doc.addPage(); y = 14; }
+  doc.setDrawColor(200,214,229); doc.line(margin,y,pw-margin,y); y += 6;
+  doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(26,38,53);
+  doc.text("TOTAL:", margin, y);
+  doc.setTextColor(10,158,106);  doc.text("Presentes: "+r.tP, margin+20, y);
+  doc.setTextColor(217,48,85);   doc.text("Ausentes: "+r.tA,  margin+58, y);
+  doc.setTextColor(192,120,0);   doc.text("Excusas: "+r.tE,   margin+92, y);
+  y += 10;
+  doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(26,38,53);
+  doc.text("Supervisor/a: _________________________________", margin, y); y += 7;
+  doc.text("Firma:        _________________________________", margin, y);
+}
+
+// ── PDF PABELLÓN ──────────────────────────────────────────────────────────────
+function pdfPabellon() {
+  var now = new Date(); var hh = now.getHours(); var mm = now.getMinutes();
+  var hora = (hh<10?"0":"")+hh+":"+(mm<10?"0":"")+mm;
+  var r = buildData(pabActual);
+  var doc = new window.jspdf.jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+  pdfHeader(doc, r.pab, r.fechaStr, hora);
+  var y = pdfCuartos(doc, r, 34, 14);
+  pdfFooter(doc, r, y, 14);
+  doc.save("Asistencia_"+r.pab+"_"+fechaActual+".pdf");
+}
+
+// ── PDF DÍA COMPLETO ──────────────────────────────────────────────────────────
+function pdfDia() {
+  var now = new Date(); var hh = now.getHours(); var mm = now.getMinutes();
+  var hora = (hh<10?"0":"")+hh+":"+(mm<10?"0":"")+mm;
+  var dt = parseFecha(fechaActual);
+  var fechaStr = DIAS[dt.getDay()]+" "+dt.getDate()+" de "+MESES[dt.getMonth()]+" "+dt.getFullYear();
+  var pabs = Object.keys(DATA);
+  var doc = new window.jspdf.jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+  var grandP=0, grandA=0, grandE=0;
+  var resumen = [];
+
+  for (var pi = 0; pi < pabs.length; pi++) {
+    if (pi > 0) doc.addPage();
+    var r = buildData(pabs[pi]);
+    grandP += r.tP; grandA += r.tA; grandE += r.tE;
+    resumen.push({pab:pabs[pi], tP:r.tP, tA:r.tA, tE:r.tE});
+    pdfHeader(doc, r.pab, fechaStr, hora);
+    var y = pdfCuartos(doc, r, 34, 14);
+    // Subtotal
+    var pw = doc.internal.pageSize.getWidth();
+    var ph = doc.internal.pageSize.getHeight();
+    if (y > ph-14) { doc.addPage(); y = 14; }
+    doc.setDrawColor(200,214,229); doc.line(14,y,pw-14,y); y += 6;
+    doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(26,38,53);
+    doc.text("SUBTOTAL "+r.pab+":", 14, y);
+    doc.setTextColor(10,158,106);  doc.text("P:"+r.tP, 60, y);
+    doc.setTextColor(217,48,85);   doc.text("A:"+r.tA, 78, y);
+    doc.setTextColor(192,120,0);   doc.text("E:"+r.tE, 96, y);
+  }
+
+  // Página resumen general
+  doc.addPage();
+  pdfHeader(doc, "RESUMEN GENERAL", fechaStr, hora);
+  var y = 34; var pw = doc.internal.pageSize.getWidth(); var margin = 14;
+  doc.setFillColor(224,234,246); doc.rect(margin,y-4,pw-margin*2,7,"F");
+  doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(26,111,204);
+  doc.text("PABELLÓN",margin+2,y); doc.text("PRESENTES",90,y); doc.text("AUSENTES",120,y);
+  doc.text("EXCUSAS",150,y); doc.text("TOTAL",175,y);
+  y += 8;
+  for (var i = 0; i < resumen.length; i++) {
+    var row = resumen[i];
+    if (i%2===0) { doc.setFillColor(247,250,253); doc.rect(margin,y-3.5,pw-margin*2,7,"F"); }
+    doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(26,38,53);
+    doc.text(row.pab, margin+2, y);
+    doc.setFont("helvetica","normal");
+    doc.setTextColor(10,158,106); doc.text(""+row.tP, 98, y, {align:"center"});
+    doc.setTextColor(217,48,85);  doc.text(""+row.tA, 128, y, {align:"center"});
+    doc.setTextColor(192,120,0);  doc.text(""+row.tE, 158, y, {align:"center"});
+    doc.setTextColor(26,38,53);   doc.text(""+(row.tP+row.tA+row.tE), 178, y, {align:"center"});
+    y += 8;
+  }
+  doc.setDrawColor(26,111,204); doc.line(margin,y,pw-margin,y); y += 7;
+  doc.setFont("helvetica","bold"); doc.setFontSize(10); doc.setTextColor(26,38,53);
+  doc.text("TOTAL GENERAL", margin+2, y);
+  doc.setTextColor(10,158,106); doc.text(""+grandP, 98, y, {align:"center"});
+  doc.setTextColor(217,48,85);  doc.text(""+grandA, 128, y, {align:"center"});
+  doc.setTextColor(192,120,0);  doc.text(""+grandE, 158, y, {align:"center"});
+  doc.setTextColor(26,38,53);   doc.text(""+(grandP+grandA+grandE), 178, y, {align:"center"});
+  y += 14;
+  doc.setFont("helvetica","normal"); doc.setFontSize(9);
+  doc.text("Supervisor/a: _________________________________", margin, y); y += 7;
+  doc.text("Firma:        _________________________________", margin, y);
+
+  doc.save("Asistencia_TOTAL_"+fechaActual+".pdf");
+}
+
+// ── PDF MES ───────────────────────────────────────────────────────────────────
+function abrirMes() {
+  // Poblar meses disponibles
+  var mesesVis = {};
+  for (var i = 0; i < FECHAS.length; i++) {
+    var dt = parseFecha(FECHAS[i]);
+    var key = dt.getFullYear()+"-"+(dt.getMonth()+1 < 10 ? "0" : "")+(dt.getMonth()+1);
+    var lbl = MESES[dt.getMonth()]+" "+dt.getFullYear();
+    mesesVis[key] = lbl;
+  }
+  var selMes = document.getElementById("sel-mes");
+  selMes.innerHTML = "";
+  var now = new Date();
+  var curKey = now.getFullYear()+"-"+(now.getMonth()+1 < 10 ? "0" : "")+(now.getMonth()+1);
+  var keys = Object.keys(mesesVis);
+  for (var i = 0; i < keys.length; i++) {
+    var opt = document.createElement("option");
+    opt.value = keys[i]; opt.textContent = mesesVis[keys[i]];
+    if (keys[i] === curKey) opt.selected = true;
+    selMes.appendChild(opt);
+  }
+  var selPab = document.getElementById("sel-pab");
+  selPab.innerHTML = '<option value="TODOS">Todos los pabellones</option>';
+  var pabs = Object.keys(DATA);
+  for (var i = 0; i < pabs.length; i++) {
+    var opt = document.createElement("option");
+    opt.value = pabs[i]; opt.textContent = pabs[i];
+    if (pabs[i] === pabActual) opt.selected = true;
+    selPab.appendChild(opt);
+  }
+  document.getElementById("modal-mes").classList.add("show");
+}
+function cerrarMes() { document.getElementById("modal-mes").classList.remove("show"); }
+function cerrarMesOutside(e) { if(e.target===document.getElementById("modal-mes")) cerrarMes(); }
+
+function pdfMes() {
+  var mesKey = document.getElementById("sel-mes").value;   // "2026-05"
+  var pabSel = document.getElementById("sel-pab").value;   // "LAURELES" | "TODOS"
+  var parts = mesKey.split("-");
+  var anio = +parts[0]; var mes = +parts[1];
+  var mesNom = MESES[mes-1]+" "+anio;
+
+  var fechasMes = [];
+  for (var i = 0; i < FECHAS.length; i++) {
+    var dt = parseFecha(FECHAS[i]);
+    if (dt.getFullYear()===anio && (dt.getMonth()+1)===mes) fechasMes.push(FECHAS[i]);
+  }
+  if (fechasMes.length === 0) { alert("No hay fechas para ese mes."); return; }
+
+  var pabellones = pabSel === "TODOS" ? Object.keys(DATA) : [pabSel];
+  var doc = new window.jspdf.jsPDF({orientation:"landscape",unit:"mm",format:"a4"});
+  var pw = 297; var ph = 210; var margin = 10;
+  var colN = 54; var colC = 15; var colF = 13;
+
+  for (var pi = 0; pi < pabellones.length; pi++) {
+    var pab = pabellones[pi];
+    if (pi > 0) doc.addPage();
+
+    // Header
+    doc.setFillColor(26,111,204); doc.rect(0,0,pw,20,"F");
+    doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(11);
+    doc.text("UNIVERSIDAD NACIONAL DE CIENCIAS FORESTALES  ·  Control de Pabellones", pw/2, 8, {align:"center"});
+    doc.setFontSize(8.5);
+    doc.text("Pabellon: "+pab+"   |   Mes: "+mesNom+"   |   "+fechasMes.length+" noches", pw/2, 16, {align:"center"});
+
+    var y = 28;
+    var maxF = Math.floor((pw - margin*2 - colN - colC - 18) / colF);
+    var bloques = [];
+    for (var bi = 0; bi < fechasMes.length; bi += maxF) {
+      bloques.push(fechasMes.slice(bi, bi+maxF));
+    }
+
+    var cuartos = Object.entries(DATA[pab]);
+
+    for (var blkIdx = 0; blkIdx < bloques.length; blkIdx++) {
+      var blk = bloques[blkIdx];
+      if (blkIdx > 0) { doc.addPage(); y = 28; }
+
+      // Cabecera columnas
+      doc.setFillColor(224,234,246); doc.rect(margin,y-4,pw-margin*2,7,"F");
+      doc.setFont("helvetica","bold"); doc.setFontSize(7); doc.setTextColor(26,111,204);
+      doc.text("ESTUDIANTE", margin+1, y);
+      doc.text("CURSO", margin+colN+1, y);
+      var xf = margin+colN+colC;
+      for (var fi = 0; fi < blk.length; fi++) {
+        var fdt = parseFecha(blk[fi]);
+        doc.text(DIAS_S[fdt.getDay()]+"\n"+fdt.getDate(), xf+colF/2, y-1, {align:"center"});
+        xf += colF;
+      }
+      doc.text("P", xf+2, y); doc.text("A", xf+7, y); doc.text("E", xf+12, y);
+      y += 5;
+
+      for (var ci = 0; ci < cuartos.length; ci++) {
+        var cuarto = cuartos[ci][0];
+        var alumnos = cuartos[ci][1];
+        if (y > ph-12) { doc.addPage(); y = 14; }
+        doc.setFillColor(214,228,242); doc.rect(margin,y-3,pw-margin*2,5.5,"F");
+        doc.setFont("helvetica","bold"); doc.setFontSize(7); doc.setTextColor(26,111,204);
+        doc.text(cuarto.toUpperCase(), margin+1, y+1);
+        y += 6;
+
+        for (var idx = 0; idx < alumnos.length; idx++) {
+          if (y > ph-6) { doc.addPage(); y = 14; }
+          var rP=0, rA=0, rE=0;
+          if (idx%2===0) { doc.setFillColor(247,250,253); doc.rect(margin,y-3,pw-margin*2,5.5,"F"); }
+          doc.setFont("helvetica","normal"); doc.setFontSize(7); doc.setTextColor(26,38,53);
+          var nom = alumnos[idx].nombre;
+          if (nom.length > 27) nom = nom.substring(0,26)+".";
+          doc.text(nom, margin+1, y+1);
+          doc.setTextColor(74,96,128);
+          doc.text(alumnos[idx].curso, margin+colN+1, y+1);
+
+          var xc = margin+colN+colC;
+          for (var fi2 = 0; fi2 < blk.length; fi2++) {
+            var est2 = getEstFecha(blk[fi2], pab, cuarto, idx);
+            var sym = est2==="presente"?"P":est2==="ausente"?"A":est2==="excusa"?"E":"-";
+            var col2 = est2==="presente"?[10,158,106]:est2==="ausente"?[217,48,85]:est2==="excusa"?[192,120,0]:[180,180,180];
+            doc.setFont("helvetica","bold"); doc.setTextColor(col2[0],col2[1],col2[2]);
+            doc.text(sym, xc+colF/2, y+1, {align:"center"});
+            if(est2==="presente")rP++; else if(est2==="ausente")rA++; else if(est2==="excusa")rE++;
+            xc += colF;
+          }
+          doc.setTextColor(10,158,106); doc.text(""+rP, xc+2, y+1);
+          doc.setTextColor(217,48,85);  doc.text(""+rA, xc+7, y+1);
+          doc.setTextColor(192,120,0);  doc.text(""+rE, xc+12, y+1);
+          y += 5.5;
+        }
+        y += 2;
+      }
+    }
+  }
+
+  var fname = "Asistencia_"+mesNom.replace(/ /g,"_")+"_"+(pabSel==="TODOS"?"TODOS":pabSel)+".pdf";
+  doc.save(fname);
+  cerrarMes();
+}
+
+// ── ADMINISTRACIÓN ───────────────────────────────────────────────────────────
+function abrirAdmin() {
+  var selPab = document.getElementById("adm-pab");
+  selPab.innerHTML = "";
+  var pabs = Object.keys(DATA);
+  for (var i = 0; i < pabs.length; i++) {
+    var opt = document.createElement("option");
+    opt.value = pabs[i]; opt.textContent = pabs[i];
+    if (pabs[i] === pabActual) opt.selected = true;
+    selPab.appendChild(opt);
+  }
+  adminCambiarPab();
+  document.getElementById("modal-admin").classList.add("show");
+}
+
+// ── Ordenar cuartos: extrae número de "HAB 13 · ICF" → 13 ───────────────────
+function numHab(nombre) {
+  var m = nombre.match(/HAB\s+(\d+)/i);
+  return m ? parseInt(m[1]) : 9999;
+}
+
+function sortCuartos(pab) {
+  var claves = Object.keys(DATA[pab]);
+  // Solo ordenar si todos empiezan con HAB (como CICAFOR)
+  var todosHab = claves.every(function(k){ return /^HAB\s+\d+/i.test(k); });
+  if (!todosHab) return claves; // mantener orden original
+  return claves.sort(function(a, b){ return numHab(a) - numHab(b); });
+}
+
+function reordenarData(pab) {
+  // Reconstruir DATA[pab] ordenado por número de habitación
+  var claves = sortCuartos(pab);
+  var nuevo = {};
+  for (var i = 0; i < claves.length; i++) {
+    nuevo[claves[i]] = DATA[pab][claves[i]];
+  }
+  DATA[pab] = nuevo;
+}
+
+function adminCambiarPab() {
+  var pab = document.getElementById("adm-pab").value;
+  var selCuarto = document.getElementById("adm-cuarto");
+  selCuarto.innerHTML = "";
+  var cuartos = sortCuartos(pab);
+  for (var i = 0; i < cuartos.length; i++) {
+    var opt = document.createElement("option");
+    opt.value = cuartos[i]; opt.textContent = cuartos[i];
+    selCuarto.appendChild(opt);
+  }
+  // Mostrar sección habitación solo para pabellones con estilo HAB
+  var hayHab = cuartos.length > 0 && /^HAB\s+\d+/i.test(cuartos[0]);
+  document.getElementById("adm-hab-section").style.display = hayHab ? "block" : "none";
+  adminRenderLista();
+}
+
+function adminRenderLista() {
+  var pab = document.getElementById("adm-pab").value;
+  var cuarto = document.getElementById("adm-cuarto").value;
+  var alumnos = DATA[pab][cuarto];
+  var lista = document.getElementById("adm-lista");
+  if (!alumnos || alumnos.length === 0) {
+    lista.innerHTML = '<p style="text-align:center;color:var(--text2);font-size:13px;padding:12px;">Sin estudiantes — agrega abajo</p>';
+    return;
+  }
+  var html = "";
+  for (var i = 0; i < alumnos.length; i++) {
+    html += '<div class="admin-fila">'
+      +'<div class="admin-fila-num">'+(i+1)+'</div>'
+      +'<div class="admin-fila-nombre">'+alumnos[i].nombre+'</div>'
+      +'<div class="admin-fila-curso">'+alumnos[i].curso+'</div>'
+      +'<button class="btn-del" onclick="adminEliminar('+i+')">✕</button>'
+      +'</div>';
+  }
+  lista.innerHTML = html;
+}
+
+function adminAgregarHab() {
+  var pab = document.getElementById("adm-pab").value;
+  var num = document.getElementById("adm-hab-num").value.trim();
+  var desc = document.getElementById("adm-hab-desc").value.trim().toUpperCase();
+  if (!num || isNaN(+num)) { alert("Escribe el número de habitación."); return; }
+  if (!desc) { alert("Escribe la descripción (ej: ICF, DAS-I)."); return; }
+  var nombre = "HAB " + num + " · " + desc;
+  if (DATA[pab][nombre]) { alert("La habitación " + nombre + " ya existe."); return; }
+  // Agregar habitación vacía
+  DATA[pab][nombre] = [];
+  // Reordenar numéricamente
+  reordenarData(pab);
+  // Sincronizar en Firebase
+  db.ref("cuartos/"+pab+"/"+fbKey(nombre)).set({_nombre: nombre, alumnos: []});
+  // Actualizar selects y vistas
+  var selCuarto = document.getElementById("adm-cuarto");
+  selCuarto.innerHTML = "";
+  var cuartos = sortCuartos(pab);
+  for (var i = 0; i < cuartos.length; i++) {
+    var opt = document.createElement("option");
+    opt.value = cuartos[i]; opt.textContent = cuartos[i];
+    if (cuartos[i] === nombre) opt.selected = true;
+    selCuarto.appendChild(opt);
+  }
+  document.getElementById("adm-hab-num").value = "";
+  document.getElementById("adm-hab-desc").value = "";
+  adminRenderLista();
+  if (pab === pabActual) { renderMain(); updateResumen(); }
+  mostrarToast("✅ Habitación " + nombre + " creada");
+}
+
+function adminEliminar(idx) {
+  var pab = document.getElementById("adm-pab").value;
+  var cuarto = document.getElementById("adm-cuarto").value;
+  var al = DATA[pab][cuarto][idx];
+  if (!confirm("¿Eliminar a " + al.nombre + "?")) return;
+  DATA[pab][cuarto].splice(idx, 1);
+  adminSyncFirebase(pab, cuarto);
+  adminRenderLista();
+  if (pab === pabActual) { renderMain(); updateResumen(); }
+  mostrarToast("Eliminado: " + al.nombre);
+}
+
+function adminAgregar() {
+  var pab = document.getElementById("adm-pab").value;
+  var cuarto = document.getElementById("adm-cuarto").value;
+  var nombre = document.getElementById("adm-nombre").value.trim();
+  var curso = document.getElementById("adm-curso").value.trim();
+  if (!nombre) { alert("Escribe el nombre del estudiante."); return; }
+  if (!curso) { alert("Escribe el curso (ej: IER, DAS, ICF)."); return; }
+  var words = nombre.split(" ");
+  for (var w = 0; w < words.length; w++) {
+    if (words[w].length > 0) words[w] = words[w][0].toUpperCase() + words[w].slice(1).toLowerCase();
+  }
+  nombre = words.join(" ");
+  curso = curso.toUpperCase();
+  DATA[pab][cuarto].push({nombre: nombre, curso: curso});
+  adminSyncFirebase(pab, cuarto);
+  document.getElementById("adm-nombre").value = "";
+  document.getElementById("adm-curso").value = "";
+  adminRenderLista();
+  if (pab === pabActual) { renderMain(); updateResumen(); }
+  mostrarToast("Agregado: " + nombre);
+}
+
+function adminSyncFirebase(pab, cuarto) {
+  var k = fbKey(cuarto);
+  var lista = DATA[pab][cuarto];
+  db.ref("estudiantes/"+pab+"/"+k).set(lista);
+}
+
+function cerrarAdmin() { document.getElementById("modal-admin").classList.remove("show"); }
+function cerrarAdminOutside(e) { if(e.target===document.getElementById("modal-admin")) cerrarAdmin(); }
+
+function mostrarToast(msg) {
+  var t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(function(){ t.classList.remove("show"); t.textContent = "¡Copiado!"; }, 2500);
+}
+
+// Cargar cuartos nuevos y estudiantes desde Firebase al iniciar
+function cargarEstudiantes() {
+  // Primero cargar cuartos nuevos (habitaciones agregadas desde el panel)
+  db.ref("cuartos").once("value", function(snapC) {
+    var cuartosData = snapC.val() || {};
+    var pabsC = Object.keys(cuartosData);
+    for (var i = 0; i < pabsC.length; i++) {
+      var pab = pabsC[i];
+      if (!DATA[pab]) continue;
+      var ks = Object.keys(cuartosData[pab]);
+      for (var j = 0; j < ks.length; j++) {
+        var k = ks[j];
+        // Buscar si ya existe este cuarto
+        var existe = false;
+        var cuartosOrig = Object.keys(DATA[pab]);
+        for (var ci = 0; ci < cuartosOrig.length; ci++) {
+          if (fbKey(cuartosOrig[ci]) === k) { existe = true; break; }
+        }
+        // Si no existe, reconstruir nombre desde la key y agregarlo
+        if (!existe) {
+          // La key es fbKey(nombre): "HAB_47___ICF" → reconstruir
+          // Guardamos el nombre original en Firebase también
+          var nomReconstruido = k.replace(/_/g, " ").replace(/\s+/g, " ").trim();
+          DATA[pab][nomReconstruido] = cuartosData[pab][k] || [];
+        }
+      }
+      reordenarData(pab);
+    }
+
+    // Luego cargar estudiantes actualizados
+    db.ref("estudiantes").once("value", function(snap) {
+      var data = snap.val() || {};
+      var pabs = Object.keys(data);
+      for (var i = 0; i < pabs.length; i++) {
+        var pab = pabs[i];
+        if (!DATA[pab]) continue;
+        var cuartos = Object.keys(data[pab]);
+        for (var j = 0; j < cuartos.length; j++) {
+          var k = cuartos[j];
+          var cuartosOrig = Object.keys(DATA[pab]);
+          for (var ci = 0; ci < cuartosOrig.length; ci++) {
+            if (fbKey(cuartosOrig[ci]) === k) {
+              DATA[pab][cuartosOrig[ci]] = data[pab][k];
+              break;
+            }
+          }
+        }
+        reordenarData(pab);
+      }
+      renderMain();
+      updateResumen();
+    });
+  });
+}
+
+// ── PDF SÓLO PRESENTES ───────────────────────────────────────────────────────
+function pdfPresentes() {
+  var doc = new window.jspdf.jsPDF({orientation:"portrait", unit:"mm", format:"a4"});
+  var pw = 210; var margin = 14; var lh = 7;
+  var now = new Date();
+  var dt = parseFecha(fechaActual);
+  var fechaStr = DIAS[dt.getDay()]+" "+dt.getDate()+" de "+MESES[dt.getMonth()]+" "+dt.getFullYear();
+  var hh = now.getHours(); var mm = now.getMinutes();
+  var hora = (hh<10?"0":"")+hh+":"+(mm<10?"0":"")+mm;
+
+  // Recolectar presentes de todos los pabellones
+  var totalPresentes = 0;
+  var bloques = []; // {pab, cuarto, alumnos:[]}
+
+  var pabs = Object.keys(DATA);
+  for (var pi = 0; pi < pabs.length; pi++) {
+    var pab = pabs[pi];
+    var cuartos = Object.keys(DATA[pab]);
+    for (var ci = 0; ci < cuartos.length; ci++) {
+      var cuarto = cuartos[ci];
+      var alumnos = DATA[pab][cuarto];
+      var presentesEnCuarto = [];
+      for (var idx = 0; idx < alumnos.length; idx++) {
+        var est = getEstFecha(fechaActual, pab, cuarto, idx);
+        if (est === "presente") {
+          presentesEnCuarto.push({nombre: alumnos[idx].nombre, curso: alumnos[idx].curso});
+          totalPresentes++;
+        }
+      }
+      if (presentesEnCuarto.length > 0) {
+        bloques.push({pab: pab, cuarto: cuarto, alumnos: presentesEnCuarto});
+      }
+    }
+  }
+
+  if (totalPresentes === 0) {
+    alert("No hay estudiantes marcados como Presente en esta fecha.");
+    return;
+  }
+
+  // ── Header ──
+  doc.setFillColor(10, 158, 106);
+  doc.rect(0, 0, pw, 28, "F");
+  doc.setTextColor(255,255,255);
+  doc.setFont("helvetica","bold"); doc.setFontSize(13);
+  doc.text("UNIVERSIDAD NACIONAL DE CIENCIAS FORESTALES", pw/2, 9, {align:"center"});
+  doc.setFontSize(10);
+  doc.text("Bienestar Estudiantil  ·  Lista de Presentes", pw/2, 17, {align:"center"});
+  doc.setFontSize(8.5);
+  doc.text("Fecha: "+fechaStr+"   Hora: "+hora+"   Total presentes: "+totalPresentes, pw/2, 24, {align:"center"});
+
+  var y = 36;
+  var numGlobal = 1;
+  var pabActualRender = "";
+
+  for (var bi = 0; bi < bloques.length; bi++) {
+    var bloque = bloques[bi];
+
+    // Separador de pabellón si cambia
+    if (bloque.pab !== pabActualRender) {
+      if (y > 265) { doc.addPage(); y = 14; }
+      pabActualRender = bloque.pab;
+      doc.setFillColor(26, 111, 204);
+      doc.rect(margin, y-4, pw-margin*2, 8, "F");
+      doc.setFont("helvetica","bold"); doc.setFontSize(10);
+      doc.setTextColor(255,255,255);
+      doc.text("PABELLÓN: "+bloque.pab, margin+3, y+1);
+      y += 10;
+    }
+
+    // Etiqueta cuarto
+    if (y > 270) { doc.addPage(); y = 14; }
+    doc.setFillColor(220, 242, 233);
+    doc.rect(margin, y-3.5, pw-margin*2, 6.5, "F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
+    doc.setTextColor(10,158,106);
+    doc.text(bloque.cuarto.toUpperCase(), margin+2, y+1);
+    y += 8;
+
+    // Filas de presentes
+    for (var ai = 0; ai < bloque.alumnos.length; ai++) {
+      if (y > 275) { doc.addPage(); y = 14; }
+      var al = bloque.alumnos[ai];
+      if (ai%2===0) {
+        doc.setFillColor(240, 253, 247);
+        doc.rect(margin, y-3.5, pw-margin*2, lh, "F");
+      }
+      // Número global
+      doc.setFont("helvetica","bold"); doc.setFontSize(8.5);
+      doc.setTextColor(10,158,106);
+      doc.text(String(numGlobal), margin+2, y+1);
+      // Checkmark
+      doc.setFillColor(10,158,106);
+      doc.circle(margin+12, y-0.5, 2.5, "F");
+      doc.setTextColor(255,255,255); doc.setFontSize(7);
+      doc.text("✓", margin+10.5, y+0.8);
+      // Nombre
+      doc.setFont("helvetica","normal"); doc.setFontSize(8.5);
+      doc.setTextColor(26,38,53);
+      doc.text(al.nombre, margin+18, y+1);
+      // Curso
+      doc.setTextColor(74,96,128);
+      doc.text(al.curso, 162, y+1);
+      numGlobal++;
+      y += lh;
+    }
+    y += 3;
+  }
+
+  // ── Pie de página ──
+  if (y > 265) { doc.addPage(); y = 14; }
+  y += 3;
+  doc.setDrawColor(10,158,106);
+  doc.line(margin, y, pw-margin, y); y += 7;
+  doc.setFont("helvetica","bold"); doc.setFontSize(10);
+  doc.setTextColor(10,158,106);
+  doc.text("TOTAL PRESENTES: "+totalPresentes, margin, y);
+  y += 10;
+  doc.setFont("helvetica","normal"); doc.setFontSize(9);
+  doc.setTextColor(26,38,53);
+  doc.text("Supervisor/a: _________________________________", margin, y); y += 7;
+  doc.text("Firma:        _________________________________", margin, y);
+
+  doc.save("Presentes_"+fechaActual+".pdf");
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+updateClock();
+setInterval(updateClock, 15000);
+renderTabs();
+renderFechas();
+updateLabel();
+lsCargarTodo();   // cargar datos locales primero (funciona sin internet)
+renderMain();
+updateResumen();
+suscribir(fechaActual);
+precargar();
+cargarEstudiantes();
+cargarVacaciones();
+</script>
+</body>
+</html>
